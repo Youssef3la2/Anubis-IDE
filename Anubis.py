@@ -1,11 +1,10 @@
 #############      author => Anubis Graduation Team        ############
 #############      this project is part of my graduation project and it intends to make a fully functioned IDE from scratch    ########
 #############      I've borrowed a function (serial_ports()) from a guy in stack overflow whome I can't remember his name, so I gave hime the copyrights of this function, thank you  ########
-
-
 import sys
 import glob
 import serial
+import io
 
 import Python_Coloring
 from PyQt5 import QtCore
@@ -13,6 +12,8 @@ from PyQt5 import QtGui
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from pathlib import Path
+
+
 
 def serial_ports():
     """ Lists serial port names
@@ -69,6 +70,7 @@ class Signal(QObject):
 # Making text editor as A global variable (to solve the issue of being local to (self) in widget class)
 text = QTextEdit
 text2 = QTextEdit
+
 
 #
 #
@@ -128,7 +130,6 @@ class Widget(QWidget):
         # second editor in which the error messeges and succeeded connections will be shown
         global text2
         text2 = QTextEdit()
-        text2.setReadOnly(True)
         # defining a Treeview variable to use it in showing the directory included files
         self.treeview = QTreeView()
 
@@ -312,18 +313,89 @@ class UI(QMainWindow):
         self.show()
 
     ###########################        Start OF the Functions          ##################
+
+    #NEW
     def Run(self):
-        if self.port_flag == 0:
-            mytext = text.toPlainText()
+        mytext = text.toPlainText()
+        # get parameters from user as a string
+        myparams = text2.toPlainText()
+        # array of parameters entered by user
+        myparams_array = myparams.split(' ')
+        fn_values = ','.join(myparams_array)
+        # test
+        print(fn_values)
+
+        # getting name of the function
+        first_index = mytext.find("def")
+        last_index = mytext.find('(')
+        fn_name_with_spaces = mytext[first_index + 3:last_index]
+        fn_name = fn_name_with_spaces.replace(" ", "")
+        # test
+        print(fn_name)
+
+        # getting return variable names if fn have only one return
+        return_index = mytext.find("return")
+        return_no = mytext.count("return")
+        # get return name only if one exist
+        if return_index != -1 & return_no == 1:
+            return_string = mytext[return_index + 6:]
+            return_string2 = return_string.replace(" ", "")
+            return_string3 = return_string2.replace("\n", "")
+            return_array = return_string3.split(',')
+            # test
+            print(return_array)
+
+        # any print will be captured into a file
+        codeOut = io.StringIO()
+        sys.stdout = codeOut
+        exec(mytext)
+
+        # if fn returns nothing
+        if return_index == -1:
+            exec(fn_name + '(' + fn_values + ')')
+
+        # only if fn have one return statement
+        elif return_index != -1 & return_no == 1:
+            exec('out = ' + fn_name + '(' + fn_values + ')')
+            # format output that will appear to user
+            exec("monica = 0")
+            i = 0
+            # if only one variable is returned
+            if len(return_array) == 1:
+                exec("print(out)")
+            else:
+                while i < len(return_array):
+                    print(return_array[i] + " = ", end=' ')
+                    exec("print(out[monica])")
+                    i += 1
+                    exec("monica += 1")
+
+        # more than 1 return
+        else:
+            exec('out = ' + fn_name + '(' + fn_values + ')')
+            exec("print(out)")
+
+        exec("text2.clear()")
+        exec("text2.append('output:')")
+        s = codeOut.getvalue()
+        text2.append(s + "")
+
+        # print will restore normal fn
+        sys.stdout = sys.__stdout__
+        codeOut.close()
+
+#Old not working code
+#       if self.port_flag == 0:
+         #   mytext = text.toPlainText()
         #
         ##### Compiler Part
         #
-#            ide.create_file(mytext)
-#            ide.upload_file(self.portNo)
-            text2.append("Sorry, there is no attached compiler.")
+#       #     ide.create_file(mytext)
+#      #      ide.upload_file(self.portNo)
+      #      text2.append("Sorry, there is no attached compiler.")
 
-        else:
-            text2.append("Please Select Your Port Number First")
+     #   else:
+    #     text2.append("Please Select Your Port Number First")
 
 
     # this function is made to get which port was selected by the user
